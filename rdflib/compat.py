@@ -136,7 +136,7 @@ def decodeStringEscape(s):
 def decodeUnicodeEscape(s):
     """
     s is a unicode string
-    replace \n and \\u00AC unicode escapes
+    replace ``\\n`` and ``\\u00AC`` unicode escapes
     """
     if not six.PY3:
         s = s.encode('utf-8').decode('string-escape')
@@ -154,3 +154,10 @@ def decodeUnicodeEscape(s):
         s = _unicodeExpand(s)  # hmm - string escape doesn't do unicode escaping
 
     return s
+
+
+# Migration to abc in Python 3.8
+try:
+    from collections.abc import Mapping, MutableMapping
+except:
+    from collections import Mapping, MutableMapping

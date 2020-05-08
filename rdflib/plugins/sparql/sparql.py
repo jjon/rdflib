@@ -3,11 +3,11 @@ from __future__ import absolute_import
 import collections
 import itertools
 import datetime
-from collections import Mapping, MutableMapping
 
 import isodate
 from six import text_type, iteritems
 
+from rdflib.compat import Mapping, MutableMapping
 from rdflib.namespace import NamespaceManager
 from rdflib import Variable, BNode, Graph, ConjunctiveGraph, URIRef, Literal
 from rdflib.term import Node
@@ -173,7 +173,10 @@ class FrozenBindings(FrozenDict):
         if not type(key) in (BNode, Variable):
             return key
 
-        return self._d[key]
+        if key not in self._d:
+            return self.ctx.initBindings[key]
+        else:
+            return self._d[key]
 
     def project(self, vars):
         return FrozenBindings(

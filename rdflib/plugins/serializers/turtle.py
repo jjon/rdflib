@@ -43,6 +43,7 @@ class RecursiveSerializer(Serializer):
     predicateOrder = [RDF.type, RDFS.label]
     maxDepth = 10
     indentString = u"  "
+    roundtrip_prefixes = tuple()
 
     def __init__(self, store):
 
@@ -77,8 +78,8 @@ class RecursiveSerializer(Serializer):
             members = list(self.store.subjects(RDF.type, classURI))
             members.sort()
 
+            subjects.extend(members)
             for member in members:
-                subjects.append(member)
                 self._topLevels[member] = True
                 seen[member] = True
 
@@ -109,6 +110,15 @@ class RecursiveSerializer(Serializer):
         self._serialized = {}
         self._subjects = {}
         self._topLevels = {}
+
+        if self.roundtrip_prefixes:
+            if hasattr(self.roundtrip_prefixes, '__iter__'):
+                for prefix, ns in self.store.namespaces():
+                    if prefix in self.roundtrip_prefixes:
+                        self.addNamespace(prefix, ns)
+            else:
+                for prefix, ns in self.store.namespaces():
+                    self.addNamespace(prefix, ns)
 
     def buildPredicateHash(self, subject):
         """
@@ -214,7 +224,11 @@ class TurtleSerializer(RecursiveSerializer):
                   spacious=None, **args):
         self.reset()
         self.stream = stream
-        self.base = base
+        # if base is given here, use that, if not and a base is set for the graph use that
+        if base is not None:
+            self.base = base
+        elif self.store.base is not None:
+            self.base = self.store.base
 
         if spacious is not None:
             self._spacious = spacious
@@ -235,6 +249,8 @@ class TurtleSerializer(RecursiveSerializer):
 
         self.endDocument()
         stream.write(b("\n"))
+
+        self.base = None
 
     def preprocessTriple(self, triple):
         super(TurtleSerializer, self).preprocessTriple(triple)
@@ -281,6 +297,9 @@ class TurtleSerializer(RecursiveSerializer):
     def startDocument(self):
         self._started = True
         ns_list = sorted(self.namespaces.items())
+
+        if self.base:
+            self.write(self.indent() + '@base <%s> .\n' % self.base)
         for prefix, uri in ns_list:
             self.write(self.indent() + '@prefix %s: <%s> .\n' % (prefix, uri))
         if ns_list and self._spacious:
